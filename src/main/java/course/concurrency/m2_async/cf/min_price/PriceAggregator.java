@@ -1,10 +1,16 @@
 package course.concurrency.m2_async.cf.min_price;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
+
 
 public class PriceAggregator {
 
+    private static final int MAX_WAITING_TIME = 2800;
+    private final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 4);
     private PriceRetriever priceRetriever = new PriceRetriever();
 
     public void setPriceRetriever(PriceRetriever priceRetriever) {
@@ -18,7 +24,24 @@ public class PriceAggregator {
     }
 
     public double getMinPrice(long itemId) {
-        // place for your code
-        return 0;
+        List<CompletableFuture<Double>> shopPrices = shopIds.stream()
+                .map(shopId -> CompletableFuture.supplyAsync(() -> priceRetriever.getPrice(itemId, shopId), executorService)
+                        .completeOnTimeout(Double.NaN, MAX_WAITING_TIME, TimeUnit.MILLISECONDS)
+                        .exceptionally(throwable -> {
+                            System.out.println("ERROR in async getPrice method: " + throwable.getMessage());
+                            return Double.NaN;
+                        }))
+                .collect(Collectors.toList());
+
+        try {
+            return CompletableFuture.allOf(shopPrices.toArray(new CompletableFuture[0]))
+                    .thenApply(future -> shopPrices.stream()
+                            .map(CompletableFuture::join)
+                            .min(Double::compareTo)
+                            .orElse(Double.NaN))
+                    .get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
