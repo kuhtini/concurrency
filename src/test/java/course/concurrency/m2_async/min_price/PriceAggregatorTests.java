@@ -94,10 +94,13 @@ public class PriceAggregatorTests {
 
         when(priceRetriever.getPrice(anyLong(), anyLong())).thenAnswer(inv -> {
             if (totalRequestCount.getAndIncrement() < half) {
+                System.out.println("return number before" + totalRequestCount.get());
                 Thread.sleep(SLA * 2);
                 return null;
             } else {
-                return prices.get(succeedRequestCount.getAndIncrement());
+                Double aDouble = prices.get(succeedRequestCount.getAndIncrement());
+                System.out.println("return number " + aDouble);
+                return aDouble;
             }
         });
 

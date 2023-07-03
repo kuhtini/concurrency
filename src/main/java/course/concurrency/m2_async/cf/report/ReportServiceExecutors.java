@@ -6,14 +6,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class ReportServiceExecutors {
 
-    private ExecutorService executor = Executors.newCachedThreadPool();
+    public final ExecutorService executor;
 
-    private LoadGenerator loadGenerator = new LoadGenerator();
+    public ReportServiceExecutors(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    private final LoadGenerator loadGenerator = new LoadGenerator();
 
     public Others.Report getReport() {
         Future<Collection<Others.Item>> iFuture =
@@ -25,7 +28,9 @@ public class ReportServiceExecutors {
             Collection<Others.Customer> customers = customersFuture.get();
             Collection<Others.Item> items = iFuture.get();
             return combineResults(items, customers);
-        } catch (ExecutionException | InterruptedException ex) {}
+        } catch (ExecutionException | InterruptedException ex) {
+            System.out.println(ex);
+        }
 
         return new Others.Report();
     }
